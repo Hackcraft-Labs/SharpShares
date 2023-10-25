@@ -18,18 +18,27 @@ namespace SharpShares
                 bool success = Utilities.Options.PrintOptions(arguments);
                 if (success)
                 {
-                    if (!String.IsNullOrEmpty(arguments.ldap))
+                    if (arguments.targets.Count > 0)
                     {
-                        List<string> ldap = Utilities.LDAP.SearchLDAP(arguments);
-                        if (ldap != null)
-                            hosts = hosts.Concat(ldap).ToList();
+                        System.Console.WriteLine("[*] Target list provided");
+                        hosts = arguments.targets;
                     }
-                    if (!String.IsNullOrEmpty(arguments.ou))
+                    else
                     {
-                        List<string> ou = Utilities.LDAP.SearchOU(arguments);
-                        if (ou != null) 
-                            hosts = hosts.Concat(ou).ToList();
+                        if (!String.IsNullOrEmpty(arguments.ldap))
+                        {
+                            List<string> ldap = Utilities.LDAP.SearchLDAP(arguments);
+                            if (ldap != null)
+                                hosts = hosts.Concat(ldap).ToList();
+                        }
+                        if (!String.IsNullOrEmpty(arguments.ou))
+                        {
+                            List<string> ou = Utilities.LDAP.SearchOU(arguments);
+                            if (ou != null)
+                                hosts = hosts.Concat(ou).ToList();
+                        }
                     }
+
                     //remove duplicate hosts
                     hosts = hosts.Distinct().ToList();
                     Utilities.Status.totalCount = hosts.Count;

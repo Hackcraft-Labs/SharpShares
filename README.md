@@ -1,13 +1,10 @@
 # SharpShares
-Multithreaded C# .NET Assembly to enumerate accessible network shares in a domain
+Multithreaded C# .NET Assembly to enumerate and spider accessible network shares in a domain or a target list
 
-Built upon [djhohnstein's SharpShares](https://github.com/djhohnstein/SharpShares) project
+Stealthy fork of [mitchmoser's SharpShares](https://github.com/mitchmoser/SharpShares) project
 
 ```
 > .\SharpShares.exe help
-
-Usage:
-    SharpShares.exe /threads:50 /ldap:servers /ou:"OU=Special Servers,DC=example,DC=local" /filter:SYSVOL,NETLOGON,IPC$,PRINT$ /verbose /outfile:C:\path\to\file.txt
 
 Optional Arguments:
     /threads  - specify maximum number of parallel threads  (default=25)
@@ -26,7 +23,18 @@ Optional Arguments:
                 default: SYSVOL,NETLOGON,IPC$,PRINT$
     /outfile  - specify file for shares to be appended to instead of printing to std out
     /verbose  - return unauthorized shares
+    /spider   - print a list of all files existing within directories (and subdirectories) in identified shares
+    /juicy    - list of comma-separated tokens to match in spidered files/folders to be reported as juicy
+    /targets  - specify a comma-separated list of target hosts
+    /sleep    - specify the time (in seconds) to sleep after each host is enumerated
+    /jitter   - specify a jitter percentage for the sleeping pattern (0-100)
 ```
+
+## New Features
+- Sleep/Jitter support
+- Share Spidering
+- Identification of juicy files/folders/shares (list is configurable)
+- Target specification to bypass LDAP enumeration
 
 ## Execute Assembly
 ```

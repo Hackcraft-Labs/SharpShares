@@ -22,13 +22,17 @@ namespace SharpShares.Utilities
             public string ldap = null;
             public string ou = null;
             public string outfile = null;
-            public string targets = null;
+            public List<string> targets = null;
+            public int sleep = 1;
+            public int jitter = 5;
+            public bool spider = false;
+            public List<string> juicy = new List<string> { "password" };
         }
         public static Dictionary<string, string[]> ParseArgs(string[] args)
         {
             Dictionary<string, string[]> result = new Dictionary<string, string[]>();
             //these boolean variables aren't passed w/ values. If passed, they are "true"
-            string[] booleans = new string[] { "/stealth", "/validate", "/verbose" };
+            string[] booleans = new string[] { "/stealth", "/validate", "/verbose" , "/spider" };
             var argList = new List<string>();
             foreach (string arg in args)
             {
@@ -81,7 +85,7 @@ namespace SharpShares.Utilities
             }
             if (parsedArgs.ContainsKey("/targets"))
             {
-                arguments.targets = parsedArgs["/targets"][0];
+                arguments.targets = parsedArgs["/targets"][0].Split(',').ToList();
             }
             if (parsedArgs.ContainsKey("/threads"))
             {
@@ -95,18 +99,33 @@ namespace SharpShares.Utilities
             {
                 arguments.verbose = Convert.ToBoolean(parsedArgs["/verbose"][0]);
             }
+            if (parsedArgs.ContainsKey("/spider"))
+            {
+                arguments.spider = Convert.ToBoolean(parsedArgs["/spider"][0]);
+            }
+            if (parsedArgs.ContainsKey("/juicy"))
+            {
+                arguments.juicy = parsedArgs["/juicy"][0].ToLower().Split(',').ToList();
+            }
+            if (parsedArgs.ContainsKey("/sleep"))
+            {
+                arguments.sleep = Convert.ToInt32(parsedArgs["/sleep"][0]);
+            }
+            if (parsedArgs.ContainsKey("/jitter"))
+            {
+                arguments.jitter = Convert.ToInt32(parsedArgs["/jitter"][0]);
+            }
             if (parsedArgs.ContainsKey("help"))
             {
                 Usage();
-                //Environment.Exit(0);
                 arguments = null;
             }
             // if no ldap or ou filter specified, search all enabled computer objects
-            if (!(parsedArgs.ContainsKey("/ldap")) && !(parsedArgs.ContainsKey("/ou")))
+            if (!parsedArgs.ContainsKey("/ldap") && !parsedArgs.ContainsKey("/ou") && !parsedArgs.ContainsKey("/targets"))
             {
-                Console.WriteLine("[!] Must specify hosts using one of the following arguments: /ldap /ou");
+                Console.WriteLine("[!] Must specify hosts using one of the following arguments: /ldap /ou /targets");
+                PrintOptions(arguments);
                 Utilities.Options.Usage();
-                //Environment.Exit(0);
                 arguments = null;
             }
             return arguments;
@@ -115,7 +134,6 @@ namespace SharpShares.Utilities
         {
             bool success = true;
             Console.WriteLine("[+] Parsed Arguments:");
-            Console.WriteLine("\tfilter: none");
             if (arguments.filter != null)
                 Console.WriteLine($"\tfilter: {String.Join(",", arguments.filter)}");
             else
@@ -127,6 +145,17 @@ namespace SharpShares.Utilities
             Console.WriteLine($"\tstealth: {arguments.stealth.ToString()}");
             Console.WriteLine($"\tthreads: {arguments.threads.ToString()}");
             Console.WriteLine($"\tverbose: {arguments.verbose.ToString()}");
+            Console.WriteLine($"\tspider: {arguments.spider.ToString()}");
+            if (arguments.juicy != null)
+                Console.WriteLine($"\tjuicy: {String.Join(",", arguments.juicy)}");
+            else
+                Console.WriteLine($"\tjuicy: none");
+            if (arguments.targets != null)
+                Console.WriteLine($"\ttargets: {String.Join(",", arguments.targets)}");
+            else
+                Console.WriteLine($"\ttargets: none");
+            Console.WriteLine($"\tsleep: {arguments.sleep.ToString()}");
+            Console.WriteLine($"\tjitter: {arguments.jitter.ToString()}");
             if (String.IsNullOrEmpty(arguments.outfile))
             { 
                 Console.WriteLine("\toutfile: none");
@@ -157,20 +186,13 @@ namespace SharpShares.Utilities
             if (arguments.filter != null) { Console.WriteLine("[*] Excluding {0} shares", String.Join(",", arguments.filter)); }
             if (arguments.verbose) { Console.WriteLine("[*] Including unreadable shares"); }
             Console.WriteLine("[*] Starting share enumeration with thread limit of {0}", arguments.threads.ToString());
-            Console.WriteLine("[r] = Readable Share\n[w] = Writeable Share\n[-] = Unauthorized Share (requires /verbose flag)\n[?] = Unchecked Share (requires /stealth flag)\n");
+            Console.WriteLine("[R] = Readable Share\n[W] = Writeable Share\n[-] = Unauthorized Share (requires /verbose flag)\n[?] = Unchecked Share (requires /stealth flag)\n");
             
             return success;
         }
         public static void Usage()
         {
             string usageString = @"
-
-█▀ █ █ ▄▀█ █▀█ █▀█ █▀ █ █ ▄▀█ █▀█ █▀▀ █▀
-▄█ █▀█ █▀█ █▀▄ █▀▀ ▄█ █▀█ █▀█ █▀▄ ██▄ ▄█
-
-Usage:
-    SharpShares.exe /threads:50 /ldap:servers /ou:""OU=Special Servers,DC=example,DC=local"" /filter:SYSVOL,NETLOGON,IPC$,PRINT$ /verbose /outfile:C:\path\to\file.txt
-
 Optional Arguments:
     /threads  - specify maximum number of parallel threads  (default=25)
     /dc       - specify domain controller to query (if not ran on a domain-joined host)
@@ -188,6 +210,11 @@ Optional Arguments:
                 default: SYSVOL,NETLOGON,IPC$,PRINT$
     /outfile  - specify file for shares to be appended to instead of printing to std out 
     /verbose  - return unauthorized shares
+    /spider   - print a list of all files existing within directories (and subdirectories) in identified shares
+    /juicy    - list of comma-separated tokens to match in spidered files/folders to be reported as juicy
+    /targets  - specify a comma-separated list of target hosts
+    /sleep    - specify the time (in seconds) to sleep after each host is enumerated
+    /jitter   - specify a jitter percentage for the sleeping pattern (0-100)
 ";
             Console.WriteLine(usageString);
         }
