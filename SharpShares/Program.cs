@@ -18,7 +18,7 @@ namespace SharpShares
                 bool success = Utilities.Options.PrintOptions(arguments);
                 if (success)
                 {
-                    if (arguments.targets.Count > 0)
+                    if (arguments.targets != null)
                     {
                         System.Console.WriteLine("[*] Target list provided");
                         hosts = arguments.targets;
